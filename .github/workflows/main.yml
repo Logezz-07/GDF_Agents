@@ -1,26 +1,57 @@
-name: Import Dialogflow CX Agent
+name: Create Dialogflow CX Agent
 
 on:
   workflow_dispatch:
 
 jobs:
-  import_agent:
+  create_agent:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
 
+      # Authenticate with service account
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      # Install gcloud (alpha needed for dialogflow cx)
       - name: Set up gcloud
         uses: google-github-actions/setup-gcloud@v2
         with:
           project_id: ${{ secrets.GCP_PROJECT_ID }}
-          service_account_key: ${{ secrets.GCP_SA_KEY }}
-          export_default_credentials: true
+          install_components: alpha
 
-      - name: Import Dialogflow CX Agent (from JSON)
+      # Create the agent
+      - name: Create Dialogflow CX Agent
         run: |
-          gcloud dialogflow cx agents import \
-            --region=${{ secrets.GCP_REGION }} \
-            --agent=${{ secrets.DIALOGFLOW_AGENT_ID }} \
-            --agent-content-from-file=./agent.json
+          LOCATION="global"
+          PROJECT=${{ secrets.GCP_PROJECT_ID }}
+          NEW_AGENT_NAME="MyNewAgent"
+          AGENT_JSON="./agent.json"
+
+          echo "🔹 Creating new Dialogflow CX agent..."
+          gcloud alpha dialogflow cx agents create \
+            --display-name="$NEW_AGENT_NAME" \
+            --default-language-code="en" \
+            --time-zone="America/Los_Angeles" \
+            --project=$PROJECT \
+            --location=$LOCATION
+
+          echo "🔹 Fetching new agent ID..."
+          NEW_AGENT_ID=$(gcloud alpha dialogflow cx agents list \
+            --project=$PROJECT \
+            --location=$LOCATION \
+            --filter="displayName=$NEW_AGENT_NAME" \
+            --format="value(name)")
+
+          echo "✅ Agent created: $NEW_AGENT_ID"
+
+          echo "🔹 Restoring agent from $AGENT_JSON..."
+          gcloud alpha dialogflow cx agents restore \
+            --agent="$NEW_AGENT_ID" \
+            --agent-content-file="$AGENT_JSON"
+
+          echo "✅ Import completed."
