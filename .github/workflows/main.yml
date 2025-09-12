@@ -1,57 +1,37 @@
 name: Create Dialogflow CX Agent
 
-on:
-  workflow_dispatch:
+on: [workflow_dispatch]
+
+env:
+  GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  GCP_REGION: global   # or set to e.g. us-central1
+  AGENT_JSON: ./agent.json
 
 jobs:
   create_agent:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
+    - name: Checkout repo
+      uses: actions/checkout@v3
 
-      - name: Authenticate to Google Cloud
-        uses: google-github-actions/auth@v2
-        with:
-          credentials_json: ${{ secrets.GCP_SA_KEY }}
+    - name: Authenticate to Google Cloud
+      id: auth
+      uses: google-github-actions/auth@v2
+      with:
+        credentials_json: ${{ secrets.GCP_SA_KEY }}
 
-      # Use the 'install_components' parameter to install any missing tools
-      - name: Set up gcloud
-        uses: google-github-actions/setup-gcloud@v2
-        with:
-          project_id: ${{ secrets.GCP_PROJECT_ID }}
-          # The Dialogflow CX commands are part of the core SDK now,
-          # but specifying "dialogflow-cx" here ensures the setup is comprehensive.
-          # It effectively runs 'gcloud components update'.
-          install_components: dialogflow-cx
+    - name: Get Access Token
+      id: gcp-token
+      run: |
+        TOKEN=$(gcloud auth print-access-token)
+        echo "ACCESS_TOKEN=$TOKEN" >> $GITHUB_ENV
 
-      - name: Create and Restore Dialogflow CX Agent
-        run: |
-          LOCATION="global"
-          PROJECT=${{ secrets.GCP_PROJECT_ID }}
-          NEW_AGENT_NAME="MyNewAgent"
-          AGENT_JSON="./agent.json"
-
-          echo "🔹 Creating new Dialogflow CX agent..."
-          gcloud dialogflow cx agents create \
-            --display-name="$NEW_AGENT_NAME" \
-            --default-language-code="en" \
-            --time-zone="America/Los_Angeles" \
-            --project=$PROJECT \
-            --location=$LOCATION
-
-          echo "🔹 Fetching new agent ID..."
-          NEW_AGENT_FULL_NAME=$(gcloud dialogflow cx agents list \
-            --project=$PROJECT \
-            --location=$LOCATION \
-            --filter="displayName=$NEW_AGENT_NAME" \
-            --format="value(name)")
-
-          echo "✅ Agent created: $NEW_AGENT_FULL_NAME"
-
-          echo "🔹 Restoring agent from $AGENT_JSON..."
-          gcloud dialogflow cx agents restore "$NEW_AGENT_FULL_NAME" \
-            --agent-content-file="$AGENT_JSON"
-
-          echo "✅ Import completed."
+    - name: Create Dialogflow CX Agent
+      run: |
+        echo "🔹 Creating agent from $AGENT_JSON..."
+        curl -X POST \
+          -H "Authorization: Bearer $ACCESS_TOKEN" \
+          -H "Content-Type: application/json" \
+          -d @"$AGENT_JSON" \
+          "https://dialogflow.googleapis.com/v3/projects/$GCP_PROJECT_ID/locations/$GCP_REGION/agents"
