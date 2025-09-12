@@ -18,6 +18,9 @@ jobs:
         project_id: ${{ secrets.GCP_PROJECT_ID }}
         credentials_json: ${{ secrets.GCP_SA_KEY }}
 
+    - name: Install Dialogflow CX gcloud component
+      run: gcloud components install dialogflow-cx --quiet
+
     - name: Import Dialogflow CX agent
       run: |
         LOCATION=global
@@ -25,7 +28,7 @@ jobs:
         AGENT_JSON="./agent.json"
 
         echo "🔹 Creating new Dialogflow CX agent..."
-        gcloud beta dialogflow cx agents create \
+        gcloud dialogflow cx agents create \
           --display-name="$NEW_AGENT_NAME" \
           --default-language-code="en" \
           --time-zone="America/Los_Angeles" \
@@ -33,7 +36,7 @@ jobs:
           --project=$GCP_PROJECT_ID
 
         echo "🔹 Fetching agent ID..."
-        NEW_AGENT_ID=$(gcloud beta dialogflow cx agents list \
+        NEW_AGENT_ID=$(gcloud dialogflow cx agents list \
           --project=$GCP_PROJECT_ID \
           --location=$LOCATION \
           --filter="displayName=$NEW_AGENT_NAME" \
@@ -42,7 +45,7 @@ jobs:
         echo "✅ Agent created: $NEW_AGENT_ID"
 
         echo "🔹 Restoring agent from $AGENT_JSON..."
-        gcloud beta dialogflow cx agents restore \
+        gcloud dialogflow cx agents restore \
           --agent="$NEW_AGENT_ID" \
           --agent-content-file="$AGENT_JSON"
 
