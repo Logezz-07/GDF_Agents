@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 jobs:
   deploy:
@@ -28,4 +29,5 @@ jobs:
         run: |
           gcloud alpha dialogflow agents restore \
             --agent=projects/${{ secrets.GCP_PROJECT_ID }}/locations/${{ secrets.GCP_LOCATION }}/agents/${{ secrets.DFCX_AGENT_ID }} \
-            --source=agent.zip
+            --source=agent.zip \
+            --quiet
