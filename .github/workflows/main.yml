@@ -11,8 +11,7 @@ jobs:
 
     env:
       PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
-      LOCATION_ID: global
-      AGENT_ID: 37446e1d-8af8-46ba-bcac-416f4d573933
+      LOCATION_ID: global   # Hardcoded global, change if needed
 
     steps:
       - name: Checkout repo
@@ -44,17 +43,32 @@ jobs:
         run: |
           test -f agent.blob || (echo "agent.blob not created"; exit 1)
 
-      - name: Restore Dialogflow CX Agent
+      - name: Deploy Dialogflow CX Agent
+        env:
+          PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+          LOCATION_ID: global
         run: |
-          # Write service account JSON correctly
+          # Write service account key to file
           cat <<EOF > gcp-key.json
           ${{ secrets.GCP_SA_KEY }}
           EOF
 
-          echo "🔹 Restoring Dialogflow CX Agent..."
-          cxcli agent restore "$AGENT_ID" \
+          # Create new agent dynamically
+          echo "🔹 Creating a new Dialogflow CX agent..."
+          NEW_AGENT_ID=$(cxcli agent create "AutoAgent-$(date +%s)" \
+            --project-id "$PROJECT_ID" \
+            --location-id "$LOCATION_ID" \
+            --credentials gcp-key.json \
+            --quiet)
+
+          echo "✅ New agent created: $NEW_AGENT_ID"
+
+          # Restore agent blob into new agent
+          echo "🔹 Restoring Dialogflow CX agent from agent.blob..."
+          cxcli agent restore "$NEW_AGENT_ID" \
             --project-id "$PROJECT_ID" \
             --location-id "$LOCATION_ID" \
             --input agent.blob \
             --credentials gcp-key.json
-          echo "✅ Restore completed."
+
+          echo "✅ Restore completed successfully."
