@@ -1,16 +1,20 @@
-name: Import Dialogflow Agent
+name: Import Dialogflow CX Agent
 
 on: [workflow_dispatch]
 
 env:
   GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  LOCATION: global
+  NEW_AGENT_NAME: "NewAgentName"
+  AGENT_JSON: "./agent.json"
 
 jobs:
   import_agent:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
+    - name: Checkout repo
+      uses: actions/checkout@v3
 
     - name: Authenticate to Google Cloud
       uses: google-github-actions/auth@v2
@@ -18,35 +22,48 @@ jobs:
         project_id: ${{ secrets.GCP_PROJECT_ID }}
         credentials_json: ${{ secrets.GCP_SA_KEY }}
 
-    - name: Install Dialogflow CX gcloud component
-      run: gcloud components install dialogflow-cx --quiet
+    - name: Setup gcloud
+      uses: google-github-actions/setup-gcloud@v2
+      with:
+        project_id: ${{ secrets.GCP_PROJECT_ID }}
+
+    - name: Update gcloud SDK
+      run: |
+        echo "🔹 Current gcloud version:"
+        gcloud --version
+        echo "🔹 Updating gcloud..."
+        gcloud components update --quiet || true
 
     - name: Import Dialogflow CX agent
       run: |
-        LOCATION=global
-        NEW_AGENT_NAME="NewAgentName"
-        AGENT_JSON="./agent.json"
-
-        echo "🔹 Creating new Dialogflow CX agent..."
-        gcloud dialogflow cx agents create \
-          --display-name="$NEW_AGENT_NAME" \
-          --default-language-code="en" \
-          --time-zone="America/Los_Angeles" \
-          --location="$LOCATION" \
-          --project=$GCP_PROJECT_ID
-
-        echo "🔹 Fetching agent ID..."
-        NEW_AGENT_ID=$(gcloud dialogflow cx agents list \
+        echo "🔹 Checking if agent '$NEW_AGENT_NAME' exists..."
+        AGENT_ID=$(gcloud dialogflow cx agents list \
           --project=$GCP_PROJECT_ID \
           --location=$LOCATION \
           --filter="displayName=$NEW_AGENT_NAME" \
           --format="value(name)")
 
-        echo "✅ Agent created: $NEW_AGENT_ID"
+        if [ -z "$AGENT_ID" ]; then
+          echo "⚡ Agent not found. Creating new agent..."
+          gcloud dialogflow cx agents create \
+            --display-name="$NEW_AGENT_NAME" \
+            --default-language-code="en" \
+            --time-zone="America/Los_Angeles" \
+            --location=$LOCATION \
+            --project=$GCP_PROJECT_ID
+          
+          AGENT_ID=$(gcloud dialogflow cx agents list \
+            --project=$GCP_PROJECT_ID \
+            --location=$LOCATION \
+            --filter="displayName=$NEW_AGENT_NAME" \
+            --format="value(name)")
+        else
+          echo "✅ Agent already exists: $AGENT_ID"
+        fi
 
         echo "🔹 Restoring agent from $AGENT_JSON..."
         gcloud dialogflow cx agents restore \
-          --agent="$NEW_AGENT_ID" \
+          --agent="$AGENT_ID" \
           --agent-content-file="$AGENT_JSON"
 
-        echo "✅ Import completed."
+        echo "✅ Import completed successfully!"
