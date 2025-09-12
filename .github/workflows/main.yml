@@ -24,21 +24,26 @@ jobs:
         NEW_AGENT_NAME="NewAgentName"
         AGENT_JSON="./agent.json"
 
-        # Create new agent
-        gcloud alpha dialogflow agent create \
-          --project=$GCP_PROJECT_ID \
-          --location=$LOCATION \
-          --display-name=$NEW_AGENT_NAME
+        echo "🔹 Creating new Dialogflow CX agent..."
+        gcloud beta dialogflow cx agents create \
+          --display-name="$NEW_AGENT_NAME" \
+          --default-language-code="en" \
+          --time-zone="America/Los_Angeles" \
+          --location="$LOCATION" \
+          --project=$GCP_PROJECT_ID
 
-        # Get new agent ID
-        NEW_AGENT_ID=$(gcloud alpha dialogflow agent list \
+        echo "🔹 Fetching agent ID..."
+        NEW_AGENT_ID=$(gcloud beta dialogflow cx agents list \
           --project=$GCP_PROJECT_ID \
           --location=$LOCATION \
           --filter="displayName=$NEW_AGENT_NAME" \
           --format="value(name)")
 
-        # Restore agent from JSON
-        gcloud alpha dialogflow agent restore $NEW_AGENT_ID \
-          --project=$GCP_PROJECT_ID \
-          --location=$LOCATION \
-          --agent-content=$AGENT_JSON
+        echo "✅ Agent created: $NEW_AGENT_ID"
+
+        echo "🔹 Restoring agent from $AGENT_JSON..."
+        gcloud beta dialogflow cx agents restore \
+          --agent="$NEW_AGENT_ID" \
+          --agent-content-file="$AGENT_JSON"
+
+        echo "✅ Import completed."
