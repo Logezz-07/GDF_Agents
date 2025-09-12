@@ -37,7 +37,7 @@ jobs:
 
       - name: Restore Dialogflow CX agent
         run: |
-          gcloud alpha dialogflow agents restore \
+          gcloud alpha dialogflow agent restore \
             --agent=projects/${{ env.GCP_PROJECT_ID }}/locations/${{ env.GCP_LOCATION }}/agents/${{ env.DFCX_AGENT_ID }} \
             --source=agent.zip \
             --quiet
