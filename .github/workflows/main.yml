@@ -1,0 +1,43 @@
+name: Import Dialogflow Agent
+
+on: [workflow_dispatch]
+
+env:
+  GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}  # Load project ID from GitHub secrets
+
+jobs:
+  import_agent:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Import Dialogflow CX agent
+        run: |
+          LOCATION=global
+          NEW_AGENT_NAME="NewAgentName"
+          AGENT_JSON="./agent.json"
+
+          # Create new agent
+          gcloud dialogflow cx agents create \
+            --project=$GCP_PROJECT_ID \
+            --location=$LOCATION \
+            --display-name=$NEW_AGENT_NAME
+
+          # Get new agent ID
+          NEW_AGENT_ID=$(gcloud dialogflow cx agents list \
+            --project=$GCP_PROJECT_ID \
+            --location=$LOCATION \
+            --filter="displayName=$NEW_AGENT_NAME" \
+            --format="value(name)")
+
+          # Restore agent from JSON
+          gcloud dialogflow cx agents restore $NEW_AGENT_ID \
+            --project=$GCP_PROJECT_ID \
+            --location=$LOCATION \
+            --agent-content=$AGENT_JSON
