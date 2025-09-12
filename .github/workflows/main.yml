@@ -17,14 +17,13 @@ jobs:
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
 
-      # Install gcloud (alpha needed for dialogflow cx)
+      # The gcloud install command does not need the "alpha" component anymore
       - name: Set up gcloud
         uses: google-github-actions/setup-gcloud@v2
         with:
           project_id: ${{ secrets.GCP_PROJECT_ID }}
-          install_components: alpha
 
-      # Create the agent
+      # Create the agent using the standard gcloud command
       - name: Create Dialogflow CX Agent
         run: |
           LOCATION="global"
@@ -33,7 +32,7 @@ jobs:
           AGENT_JSON="./agent.json"
 
           echo "🔹 Creating new Dialogflow CX agent..."
-          gcloud alpha dialogflow cx agents create \
+          gcloud dialogflow cx agents create \
             --display-name="$NEW_AGENT_NAME" \
             --default-language-code="en" \
             --time-zone="America/Los_Angeles" \
@@ -41,7 +40,7 @@ jobs:
             --location=$LOCATION
 
           echo "🔹 Fetching new agent ID..."
-          NEW_AGENT_ID=$(gcloud alpha dialogflow cx agents list \
+          NEW_AGENT_ID=$(gcloud dialogflow cx agents list \
             --project=$PROJECT \
             --location=$LOCATION \
             --filter="displayName=$NEW_AGENT_NAME" \
@@ -50,8 +49,7 @@ jobs:
           echo "✅ Agent created: $NEW_AGENT_ID"
 
           echo "🔹 Restoring agent from $AGENT_JSON..."
-          gcloud alpha dialogflow cx agents restore \
-            --agent="$NEW_AGENT_ID" \
+          gcloud dialogflow cx agents restore "$NEW_AGENT_ID" \
             --agent-content-file="$AGENT_JSON"
 
           echo "✅ Import completed."
