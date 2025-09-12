@@ -24,20 +24,20 @@ jobs:
           AGENT_JSON="./agent.json"
 
           # Create new agent
-          gcloud dialogflow cx agents create \
+          gcloud alpha dialogflow cx agents create \
             --project=$GCP_PROJECT_ID \
             --location=$LOCATION \
             --display-name=$NEW_AGENT_NAME
 
           # Get new agent ID
-          NEW_AGENT_ID=$(gcloud dialogflow cx agents list \
+          NEW_AGENT_ID=$(gcloud alpha dialogflow cx agents list \
             --project=$GCP_PROJECT_ID \
             --location=$LOCATION \
             --filter="displayName=$NEW_AGENT_NAME" \
             --format="value(name)")
 
           # Restore agent from JSON
-          gcloud dialogflow cx agents restore $NEW_AGENT_ID \
+          gcloud alpha dialogflow cx agents restore $NEW_AGENT_ID \
             --project=$GCP_PROJECT_ID \
             --location=$LOCATION \
             --agent-content=$AGENT_JSON
