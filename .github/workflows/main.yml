@@ -1,37 +1,31 @@
-name: Create Dialogflow CX Agent
+name: Deploy Dialogflow CX Agent
 
-on: [workflow_dispatch]
-
-env:
-  GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
-  GCP_REGION: global   # or set to e.g. us-central1
-  AGENT_JSON: ./agent.json
+on:
+  push:
+    branches:
+      - main
 
 jobs:
-  create_agent:
+  deploy:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repo
-      uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-    - name: Authenticate to Google Cloud
-      id: auth
-      uses: google-github-actions/auth@v2
-      with:
-        credentials_json: ${{ secrets.GCP_SA_KEY }}
+      - name: Authenticate with Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
 
-    - name: Get Access Token
-      id: gcp-token
-      run: |
-        TOKEN=$(gcloud auth print-access-token)
-        echo "ACCESS_TOKEN=$TOKEN" >> $GITHUB_ENV
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@v2
 
-    - name: Create Dialogflow CX Agent
-      run: |
-        echo "🔹 Creating agent from $AGENT_JSON..."
-        curl -X POST \
-          -H "Authorization: Bearer $ACCESS_TOKEN" \
-          -H "Content-Type: application/json" \
-          -d @"$AGENT_JSON" \
-          "https://dialogflow.googleapis.com/v3/projects/$GCP_PROJECT_ID/locations/$GCP_REGION/agents"
+      - name: Zip agent files
+        run: zip -r agent.zip agent.json flows intents entityTypes webhooks generativeSettings || true
+
+      - name: Restore agent into Dialogflow CX
+        run: |
+          gcloud alpha dialogflow agents restore \
+            --agent=projects/${{ secrets.GCP_PROJECT_ID }}/locations/${{ secrets.GCP_LOCATION }}/agents/${{ secrets.DFCX_AGENT_ID }} \
+            --source=agent.zip
