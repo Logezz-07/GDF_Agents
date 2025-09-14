@@ -13,7 +13,7 @@ jobs:
 
       - name: Set up GCP credentials
         run: |
-          echo "${{ secrets.GCP_SA_KEY }}" > gcp-key.json
+          printf '%s' "${{ secrets.GCP_SA_KEY }}" > gcp-key.json
         shell: bash
 
       - name: Setup gcloud
