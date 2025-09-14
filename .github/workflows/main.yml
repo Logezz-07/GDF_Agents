@@ -12,7 +12,6 @@ jobs:
       - name: Set up GCP credentials
         run: |
           echo "${{ secrets.GCP_SA_KEY }}" > gcp-key.json
-          cat gcp-key.json | jq . # Validates JSON is correct
         shell: bash
 
       - name: Setup gcloud CLI
