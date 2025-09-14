@@ -60,8 +60,8 @@ jobs:
             --location-id "$LOCATION_ID" \
             --locale "en" \
             --timezone "America/New_York" \
-            --credentials gcp-key.json \
-            --output-format json | jq -r '.agentId')
+            --credentials gcp-key.json | \
+            grep -oE 'agents/[a-f0-9\-]+' | head -n1 | sed 's/agents\///')
 
           echo "✅ New agent created: $NEW_AGENT_ID"
 
