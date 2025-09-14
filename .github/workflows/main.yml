@@ -1,51 +1,49 @@
 name: Dialogflow CX Agent Import
-
 on:
-  workflow_dispatch:   # Manual trigger
+  workflow_dispatch:
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Set up GCP credentials
         run: |
-          # Replace escaped \n in the secret with real newlines
-          echo "${{ secrets.GCP_SA_KEY }}" | sed 's/\\n/\n/g' > gcp-key.json
+          echo "${{ secrets.GCP_SA_KEY }}" > gcp-key.json
+          cat gcp-key.json | jq . # Validates JSON is correct
         shell: bash
 
-      - name: Setup gcloud
+      - name: Setup gcloud CLI
         uses: google-github-actions/setup-gcloud@v2
         with:
           project_id: ${{ secrets.GCP_PROJECT_ID }}
           export_default_credentials: true
 
-      - name: Install tools + cxcli
+      - name: Install Dialogflow CX CLI (cxcli)
         run: |
           curl -L -o cxcli.tar.gz "https://github.com/xavidop/dialogflow-cx-cli/releases/download/v1.239.0/cxcli_Linux_x86_64.tar.gz"
           tar -xzf cxcli.tar.gz
           sudo mv cxcli /usr/local/bin/
           cxcli version
 
-      - name: Zip agent export into agent.blob
+      - name: Zip agent files into agent.blob
         run: |
-          echo "Zipping agent export files into agent.blob..."
           zip -r agent.blob agent.json flows intents entityTypes webhooks generativeSettings
+          unzip -l agent.blob  # Lists contents for verification
 
-      - name: Verify blob
-        run: |
-          echo "Checking if agent.blob was created..."
-          ls -lh agent.blob
+      - name: Verify agent.blob created
+        run: ls -lh agent.blob
 
       - name: Restore Dialogflow CX Agent
         run: |
-          AGENT_ID="projects/roger-470808/locations/global/agents/69d4bea6-54a0-4c23-b320-c81c6031fe8c"
-          echo "Restoring into agent: $AGENT_ID"
+          AGENT_ID="projects/${{ secrets.GCP_PROJECT_ID }}/locations/global/agents/69d4bea6-54a0-4c23-b320-c81c6031fe8c"
+          echo "Restoring agent: $AGENT_ID"
           cxcli agent restore "$AGENT_ID" \
             --project-id "${{ secrets.GCP_PROJECT_ID }}" \
             --location-id "global" \
             --input agent.blob \
-            --credentials gcp-key.json
+            --credentials gcp-key.json \
+            --output-format json \
+            --verbose
