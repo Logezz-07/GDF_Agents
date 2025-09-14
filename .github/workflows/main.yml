@@ -6,15 +6,21 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Set up GCP credentials
+        run: |
+          echo "${{ secrets.GCP_SA_KEY }}" > gcp-key.json
+        shell: bash
 
       - name: Setup gcloud
         uses: google-github-actions/setup-gcloud@v2
         with:
           project_id: ${{ secrets.GCP_PROJECT_ID }}
-          service_account_key: ${{ secrets.GCP_SA_KEY }}
+          service_account_key: gcp-key.json
           export_default_credentials: true
 
       - name: Install tools + cxcli
@@ -39,6 +45,7 @@ jobs:
           AGENT_ID="projects/roger-470808/locations/global/agents/69d4bea6-54a0-4c23-b320-c81c6031fe8c"
           echo "Restoring into agent: $AGENT_ID"
           cxcli agent restore "$AGENT_ID" \
-            --project-id "roger-470808" \
+            --project-id "${{ secrets.GCP_PROJECT_ID }}" \
             --location-id "global" \
-            --input agent.blob
+            --input agent.blob \
+            --credentials gcp-key.json
