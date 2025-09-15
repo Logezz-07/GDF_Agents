@@ -1,20 +1,23 @@
-name: Build Dialogflow CX Agent Blob
+name: Build and Restore Dialogflow CX Agent
 
 on:
   workflow_dispatch:
 
 jobs:
-  build-blob:
+  build-and-restore:
     runs-on: ubuntu-latest
     steps:
+      # 1️⃣ Checkout repo
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Auth to GCP (Dev)
+      # 2️⃣ Authenticate to GCP (Dev/Prod credentials)
+      - name: Auth to GCP (Prod)
         uses: google-github-actions/auth@v2
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
 
+      # 3️⃣ Install cxcli
       - name: Install cxcli
         run: |
           curl -L -o cxcli.tar.gz https://github.com/xavidop/dialogflow-cx-cli/releases/download/v1.239.0/cxcli_Linux_x86_64.tar.gz
@@ -22,21 +25,21 @@ jobs:
           sudo mv cxcli /usr/local/bin/
           cxcli version
 
-      - name: Export agent from Dev as JSON blob
+      # 4️⃣ Zip the agent files from repo structure
+      - name: Build agent zip
         run: |
-          cxcli agent export "R4B_IVA" \
+          echo "Building agent.zip from repo structure..."
+          zip -r agent.zip agent.json flows intents entityTypes webhooks generativeSettings
+          ls -lh agent.zip
+
+      # 5️⃣ Restore agent to Prod
+      - name: Restore Dialogflow CX Agent
+        run: |
+          PROD_AGENT_ID="RogersFlow"
+          echo "Restoring agent to Prod: $PROD_AGENT_ID"
+          cxcli agent restore "$PROD_AGENT_ID" \
             --project-id "roger-470808" \
             --location-id "us-central1" \
-            --export-format json \
-            --output-file agent.zip
-          ls -lh agent.zip
-          
-      - name: Commit and push agent.zip
-        run: |
-          mkdir -p exports
-          mv agent.zip exports/
-          git config --global user.name "github-actions"
-          git config --global user.email "actions@github.com"
-          git add exports/agent.zip
-          git commit -m "Exported agent blob from Dev on $(date)"
-          git push
+            --input agent.zip \
+            --output-format json \
+            --verbose
