@@ -1,52 +1,44 @@
-name: Dialogflow CX Agent Import
+name: Build Dialogflow CX Agent Blob
 
 on:
   workflow_dispatch:
 
 jobs:
-  deploy:
+  build-blob:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      id-token: write  # Needed if later switching to Workload Identity
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Auth to GCP
+      - name: Auth to GCP (Dev)
         uses: google-github-actions/auth@v2
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
 
-      - name: Setup gcloud
-        uses: google-github-actions/setup-gcloud@v2
-        with:
-          project_id: ${{ secrets.GCP_PROJECT_ID }}
-
-      - name: Install Dialogflow CX CLI
+      - name: Install cxcli
         run: |
           curl -L -o cxcli.tar.gz https://github.com/xavidop/dialogflow-cx-cli/releases/download/v1.239.0/cxcli_Linux_x86_64.tar.gz
           tar -xzf cxcli.tar.gz
           sudo mv cxcli /usr/local/bin/
           cxcli version
 
-      - name: Build agent.blob from repo
+      - name: Export agent from Dev as blob
         run: |
-          echo "Building agent.blob from agent.json + flows/ + intents/ ..."
-          cxcli agent build \
-            --input . \
+          AGENT_ID="projects/roger-470808/locations/us-central1/agents/96f763fc-6670-49ce-a6c3-c8a6026842a1"
+          echo "Exporting agent: $AGENT_ID"
+          cxcli agent export "$AGENT_ID" \
+            --project-id "roger-470808" \
+            --location-id "us-central1" \
             --export-format blob \
             --output-file agent.blob
           ls -lh agent.blob
 
-      - name: Restore Dialogflow CX Agent
+      - name: Commit and push agent.blob
         run: |
-          AGENT_ID="projects/${{ secrets.GCP_PROJECT_ID }}/locations/global/agents/050618aa-eb9f-46d3-aa7d-e1272608253c"
-          echo "Restoring agent: $AGENT_ID"
-          cxcli agent restore "$AGENT_ID" \
-            --project-id "${{ secrets.GCP_PROJECT_ID }}" \
-            --location-id "global" \
-            --input agent.blob \
-            --output-format json \
-            --verbose
+          mkdir -p exports
+          mv agent.blob exports/
+          git config --global user.name "github-actions"
+          git config --global user.email "actions@github.com"
+          git add exports/agent.blob
+          git commit -m "Exported agent blob from Dev on $(date)"
+          git push
