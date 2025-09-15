@@ -29,7 +29,6 @@ jobs:
             --location-id "us-central1" \
             --export-format json \
             --output-file agent.zip
-            --verbose
           ls -lh agent.zip
           
       - name: Commit and push agent.zip
