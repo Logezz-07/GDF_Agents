@@ -42,7 +42,7 @@ jobs:
 
       - name: Restore Dialogflow CX Agent
         run: |
-          AGENT_ID="projects/${{ secrets.GCP_PROJECT_ID }}/locations/global/agents/69d4bea6-54a0-4c23-b320-c81c6031fe8c"
+          AGENT_ID="projects/${{ secrets.GCP_PROJECT_ID }}/locations/global/agents/050618aa-eb9f-46d3-aa7d-e1272608253c"
           echo "Restoring agent: $AGENT_ID"
           cxcli agent restore "$AGENT_ID" \
             --project-id "${{ secrets.GCP_PROJECT_ID }}" \
