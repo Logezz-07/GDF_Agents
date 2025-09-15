@@ -1,10 +1,10 @@
-name: Build Dialogflow CX Agent Blob
+name: Build Dialogflow CX Agent Zip
 
 on:
   workflow_dispatch:
 
 jobs:
-  build-blob:
+  build-zip:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -22,23 +22,23 @@ jobs:
           sudo mv cxcli /usr/local/bin/
           cxcli version
 
-      - name: Export agent from Dev as blob
+      - name: Export agent from Dev as zip
         run: |
           AGENT_ID="projects/roger-470808/locations/us-central1/agents/96f763fc-6670-49ce-a6c3-c8a6026842a1"
           echo "Exporting agent: $AGENT_ID"
           cxcli agent export "$AGENT_ID" \
             --project-id "roger-470808" \
             --location-id "us-central1" \
-            --export-format blob \
-            --output-file agent.blob
-          ls -lh agent.blob
+            --export-format json \
+            --output-file agent.zip
+          ls -lh agent.zip
 
-      - name: Commit and push agent.blob
+      - name: Commit and push agent.zip
         run: |
           mkdir -p exports
-          mv agent.blob exports/
+          mv agent.zip exports/
           git config --global user.name "github-actions"
           git config --global user.email "actions@github.com"
-          git add exports/agent.blob
-          git commit -m "Exported agent blob from Dev on $(date)"
+          git add exports/agent.zip
+          git commit -m "Exported agent zip from Dev on $(date)" || echo "No changes to commit"
           git push
