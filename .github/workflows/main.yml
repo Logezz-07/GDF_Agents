@@ -24,15 +24,14 @@ jobs:
 
       - name: Export agent from Dev as JSON blob
         run: |
-          AGENT_ID="96f763fc-6670-49ce-a6c3-c8a6026842a1"
-          echo "Exporting agent: $AGENT_ID"
-          cxcli agent export "$AGENT_ID" \
+          cxcli agent export "R4B_IVA" \
             --project-id "roger-470808" \
             --location-id "us-central1" \
             --export-format json \
             --output-file agent.zip
+            --verbose
           ls -lh agent.zip
-
+          
       - name: Commit and push agent.zip
         run: |
           mkdir -p exports
