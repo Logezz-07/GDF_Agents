@@ -1,4 +1,5 @@
 name: Dialogflow CX Agent Import
+
 on:
   workflow_dispatch:
 
@@ -8,6 +9,7 @@ jobs:
     permissions:
       contents: read
       id-token: write  # Needed if later switching to Workload Identity
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -29,10 +31,14 @@ jobs:
           sudo mv cxcli /usr/local/bin/
           cxcli version
 
-      - name: Zip agent files
+      - name: Build agent.blob from repo
         run: |
-          zip -r agent.blob agent.json flows intents entityTypes webhooks generativeSettings
-          unzip -l agent.blob
+          echo "Building agent.blob from agent.json + flows/ + intents/ ..."
+          cxcli agent build \
+            --input . \
+            --export-format blob \
+            --output-file agent.blob
+          ls -lh agent.blob
 
       - name: Restore Dialogflow CX Agent
         run: |
